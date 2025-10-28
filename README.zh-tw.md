@@ -6,7 +6,7 @@
 </a>
 
 <div align="center">
-  <h1>Framelink Figma MCP 伺服器</h1>
+  <h1>Framelink MCP for Figma 伺服器</h1>
   <p>
     🌐 可用語言:
     <a href="README.md">English (英文)</a> |
@@ -59,7 +59,7 @@
 
 許多程式碼編輯器和其他 AI 客戶端都使用設定檔來管理 MCP 伺服器。
 
-可以透過將以下內容新增至您的設定檔來設定 `figma-developer-mcp` 伺र्वर。
+可以透過將以下內容新增至您的設定檔來設定 `figma-developer-mcp` 伺服器。
 
 > 注意：您需要建立一個 Figma 存取權杖才能使用此伺服器。有關如何建立 Figma API 存取權杖的說明，請參閱[此處](https://help.figma.com/hc/en-us/articles/8085703771159-Manage-personal-access-tokens)。
 
@@ -68,7 +68,7 @@
 ```json
 {
   "mcpServers": {
-    "Framelink Figma MCP": {
+    "Framelink MCP for Figma": {
       "command": "npx",
       "args": ["-y", "figma-developer-mcp", "--figma-api-key=YOUR-KEY", "--stdio"]
     }
@@ -81,7 +81,7 @@
 ```json
 {
   "mcpServers": {
-    "Framelink Figma MCP": {
+    "Framelink MCP for Figma": {
       "command": "cmd",
       "args": ["/c", "npx", "-y", "figma-developer-mcp", "--figma-api-key=YOUR-KEY", "--stdio"]
     }
@@ -91,7 +91,7 @@
 
 或者您可以在 `env` 欄位中設定 `FIGMA_API_KEY` 和 `PORT`。
 
-如果您需要有關如何設定 Framelink Figma MCP 伺服器的更多資訊，請參閱 [Framelink 文件](https://www.framelink.ai/docs/quickstart?utm_source=github&utm_medium=referral&utm_campaign=readme)。
+如果您需要有關如何設定 Framelink MCP for Figma 伺服器的更多資訊，請參閱 [Framelink 文件](https://www.framelink.ai/docs/quickstart?utm_source=github&utm_medium=referral&utm_campaign=readme)。
 
 ## Star 歷史
 
@@ -99,4 +99,4 @@
 
 ## 了解更多
 
-Framelink Figma MCP 伺服器既簡單又強大。請前往 [Framelink](https://framelink.ai?utm_source=github&utm_medium=referral&utm_campaign=readme) 網站了解更多資訊，以充分利用它。
+Framelink MCP for Figma 伺服器既簡單又強大。請前往 [Framelink](https://framelink.ai?utm_source=github&utm_medium=referral&utm_campaign=readme) 網站了解更多資訊，以充分利用它。

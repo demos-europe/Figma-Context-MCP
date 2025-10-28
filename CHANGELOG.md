@@ -1,5 +1,49 @@
 # figma-developer-mcp
 
+## 0.6.4
+
+### Patch Changes
+
+- [#250](https://github.com/GLips/Figma-Context-MCP/pull/250) [`9966623`](https://github.com/GLips/Figma-Context-MCP/commit/996662352cdeaa8e6d4a6f64154d6135c00a35ee) Thanks [@GLips](https://github.com/GLips)! - Collapse containers that only have vector children to better handle SVG image downloads and also make output size smaller.
+
+## 0.6.3
+
+### Patch Changes
+
+- [#246](https://github.com/GLips/Figma-Context-MCP/pull/246) [`7f4b585`](https://github.com/GLips/Figma-Context-MCP/commit/7f4b5859454b0567c2121ff22c69a0344680b124) Thanks [@GLips](https://github.com/GLips)! - Updates to validate user input, run HTTP server on localhost only
+
+## 0.6.2
+
+### Patch Changes
+
+- [#244](https://github.com/GLips/Figma-Context-MCP/pull/244) [`8277424`](https://github.com/GLips/Figma-Context-MCP/commit/8277424205e6421a133ac38086f6eb7ac124ea65) Thanks [@GLips](https://github.com/GLips)! - Support imports without starting server or looking for env vars.
+
+## 0.6.1
+
+### Patch Changes
+
+- [#240](https://github.com/GLips/Figma-Context-MCP/pull/240) [`2b1923d`](https://github.com/GLips/Figma-Context-MCP/commit/2b1923dcf50275a3d4daf9279265d27c6fadb2f7) Thanks [@GLips](https://github.com/GLips)! - Fix issue where importing package triggered config check.
+
+- [#239](https://github.com/GLips/Figma-Context-MCP/pull/239) [`00bad7d`](https://github.com/GLips/Figma-Context-MCP/commit/00bad7dae48a6d0cc55d78560cc691a39271f151) Thanks [@Hengkai-Ye](https://github.com/Hengkai-Ye)! - Fix: Make sure LLM provides a filename extension when calling download_figma_images
+
+## 0.6.0
+
+### Minor Changes
+
+- [#233](https://github.com/GLips/Figma-Context-MCP/pull/233) [`26a048b`](https://github.com/GLips/Figma-Context-MCP/commit/26a048bbd09db2b7e5265b5777609fb619617068) Thanks [@scarf005](https://github.com/scarf005)! - Return named styles from Figma instead of auto-generated IDs when they exist.
+
+## 0.5.2
+
+### Patch Changes
+
+- [#227](https://github.com/GLips/Figma-Context-MCP/pull/227) [`68fbc87`](https://github.com/GLips/Figma-Context-MCP/commit/68fbc87645d25c57252d4d9bec5f43ee4238b09f) Thanks [@fightZy](https://github.com/fightZy)! - Update Node ID regex to support additional formats, e.g. multiple nodes.
+
+## 0.5.1
+
+### Patch Changes
+
+- [#205](https://github.com/GLips/Figma-Context-MCP/pull/205) [`618bbe9`](https://github.com/GLips/Figma-Context-MCP/commit/618bbe98c49428e617de0240f0e9c2842867ae9b) Thanks [@GLips](https://github.com/GLips)! - Calculate gradient values instead of passing raw Figma data.
+
 ## 0.5.0
 
 ### Minor Changes

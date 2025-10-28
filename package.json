@@ -1,11 +1,12 @@
 {
   "name": "figma-developer-mcp",
-  "version": "0.5.0",
-  "description": "Model Context Protocol server for Figma integration",
+  "version": "0.6.4",
+  "mcpName": "io.github.GLips/Figma-Context-MCP",
+  "description": "Give your coding agent access to your Figma data. Implement designs in any framework in one-shot.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "figma-developer-mcp": "dist/cli.js"
+    "figma-developer-mcp": "dist/bin.js"
   },
   "files": [
     "dist",
@@ -15,12 +16,12 @@
     "build": "tsup --dts",
     "type-check": "tsc --noEmit",
     "test": "jest",
-    "start": "node dist/cli.js",
-    "start:cli": "cross-env NODE_ENV=cli node dist/cli.js",
-    "start:http": "node dist/cli.js",
+    "start": "node dist/bin.js",
+    "start:cli": "cross-env NODE_ENV=cli node dist/bin.js",
+    "start:http": "node dist/bin.js",
     "dev": "cross-env NODE_ENV=development tsup --watch",
     "dev:cli": "cross-env NODE_ENV=development tsup --watch -- --stdio",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint .",
     "format": "prettier --write \"src/**/*.ts\"",
     "inspect": "pnpx @modelcontextprotocol/inspector",
     "prepack": "pnpm build",
@@ -67,6 +68,7 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.29.2",
+    "@eslint/js": "^9.33.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
     "@types/js-yaml": "^4.0.9",

@@ -1,5 +1,4 @@
-import type { Node as FigmaDocumentNode } from "@figma/rest-api-spec";
-import type { StyleId } from "~/utils/common.js";
+import type { Node as FigmaDocumentNode, Style } from "@figma/rest-api-spec";
 import type { SimplifiedTextStyle } from "~/transformers/text.js";
 import type { SimplifiedLayout } from "~/transformers/layout.js";
 import type { SimplifiedFill, SimplifiedStroke } from "~/transformers/style.js";
@@ -19,11 +18,11 @@ export type StyleTypes =
   | string;
 
 export type GlobalVars = {
-  styles: Record<StyleId, StyleTypes>;
+  styles: Record<string, StyleTypes>;
 };
 
 export interface TraversalContext {
-  globalVars: GlobalVars;
+  globalVars: GlobalVars & { extraStyles?: Record<string, Style> };
   currentDepth: number;
   parent?: FigmaDocumentNode;
 }
@@ -31,6 +30,20 @@ export interface TraversalContext {
 export interface TraversalOptions {
   maxDepth?: number;
   nodeFilter?: (node: FigmaDocumentNode) => boolean;
+  /**
+   * Called after children are processed, allowing modification of the parent node
+   * and control over which children to include in the output.
+   *
+   * @param node - Original Figma node
+   * @param result - SimplifiedNode being built (can be mutated)
+   * @param children - Processed children
+   * @returns Children to include (return empty array to omit children)
+   */
+  afterChildren?: (
+    node: FigmaDocumentNode,
+    result: SimplifiedNode,
+    children: SimplifiedNode[],
+  ) => SimplifiedNode[];
 }
 
 /**
@@ -48,8 +61,6 @@ export type ExtractorFn = (
 
 export interface SimplifiedDesign {
   name: string;
-  lastModified: string;
-  thumbnailUrl: string;
   nodes: SimplifiedNode[];
   components: Record<string, SimplifiedComponentDefinition>;
   componentSets: Record<string, SimplifiedComponentSetDefinition>;
@@ -67,6 +78,10 @@ export interface SimplifiedNode {
   fills?: string;
   styles?: string;
   strokes?: string;
+  // Non-stylable stroke properties are kept on the node when stroke uses a named color style
+  strokeWeight?: string;
+  strokeDashes?: number[];
+  strokeWeights?: string;
   effects?: string;
   opacity?: number;
   borderRadius?: string;
