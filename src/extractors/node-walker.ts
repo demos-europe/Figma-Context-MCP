@@ -1,28 +1,24 @@
 import type { Node as FigmaDocumentNode } from "@figma/rest-api-spec";
 import { isVisible } from "~/utils/common.js";
 import { hasValue } from "~/utils/identity.js";
+import type { Style } from "@figma/rest-api-spec";
 import type {
   ExtractorFn,
+  NodeCounter,
   TraversalContext,
   TraversalOptions,
+  TraversalState,
   GlobalVars,
   SimplifiedNode,
 } from "./types.js";
 
 // Yield the event loop every N nodes so heartbeats, SIGINT, and
 // other async work can run during large file processing.
-// Yield the event loop every N nodes so heartbeats, SIGINT, and
-// other async work can run during large file processing.
 const YIELD_INTERVAL = 100;
-let nodesProcessed = 0;
 
-export function getNodesProcessed(): number {
-  return nodesProcessed;
-}
-
-async function maybeYield(): Promise<void> {
-  nodesProcessed++;
-  if (nodesProcessed % YIELD_INTERVAL === 0) {
+async function maybeYield(counter: NodeCounter): Promise<void> {
+  counter.count++;
+  if (counter.count % YIELD_INTERVAL === 0) {
     await new Promise<void>((resolve) => setImmediate(resolve));
   }
 }
@@ -41,17 +37,23 @@ export async function extractFromDesign(
   extractors: ExtractorFn[],
   options: TraversalOptions = {},
   globalVars: GlobalVars = { styles: {} },
-): Promise<{ nodes: SimplifiedNode[]; globalVars: GlobalVars }> {
+  extraStyles?: Record<string, Style>,
+): Promise<{
+  nodes: SimplifiedNode[];
+  globalVars: GlobalVars;
+  traversalState: TraversalState;
+}> {
   const context: TraversalContext = {
     globalVars,
+    extraStyles,
     currentDepth: 0,
+    traversalState: { componentPropertyDefinitions: {}, tsCounter: 0 },
+    nodeCounter: options.nodeCounter ?? { count: 0 },
   };
-
-  nodesProcessed = 0;
 
   const processedNodes: SimplifiedNode[] = [];
   for (const node of nodes) {
-    if (!shouldProcessNode(node, options)) continue;
+    if (!shouldProcessNode(node, context, options)) continue;
     const result = await processNodeWithExtractors(node, extractors, context, options);
     if (result !== null) processedNodes.push(result);
   }
@@ -59,6 +61,7 @@ export async function extractFromDesign(
   return {
     nodes: processedNodes,
     globalVars: context.globalVars,
+    traversalState: context.traversalState,
   };
 }
 
@@ -71,11 +74,11 @@ async function processNodeWithExtractors(
   context: TraversalContext,
   options: TraversalOptions,
 ): Promise<SimplifiedNode | null> {
-  if (!shouldProcessNode(node, options)) {
+  if (!shouldProcessNode(node, context, options)) {
     return null;
   }
 
-  await maybeYield();
+  await maybeYield(context.nodeCounter);
 
   // Always include base metadata
   const result: SimplifiedNode = {
@@ -95,13 +98,20 @@ async function processNodeWithExtractors(
       ...context,
       currentDepth: context.currentDepth + 1,
       parent: node,
+      // COMPONENT nodes define properties; INSTANCE nodes resolve them
+      insideComponentDefinition:
+        node.type === "COMPONENT" || node.type === "COMPONENT_SET"
+          ? true
+          : node.type === "INSTANCE"
+            ? false
+            : context.insideComponentDefinition,
     };
 
     // Use the same pattern as the existing parseNode function
     if (hasValue("children", node) && node.children.length > 0) {
       const children: SimplifiedNode[] = [];
       for (const child of node.children) {
-        if (!shouldProcessNode(child, options)) continue;
+        if (!shouldProcessNode(child, childContext, options)) continue;
         const processed = await processNodeWithExtractors(child, extractors, childContext, options);
         if (processed !== null) children.push(processed);
       }
@@ -125,13 +135,23 @@ async function processNodeWithExtractors(
 /**
  * Determine if a node should be processed based on filters.
  */
-function shouldProcessNode(node: FigmaDocumentNode, options: TraversalOptions): boolean {
-  // Skip invisible nodes
+function shouldProcessNode(
+  node: FigmaDocumentNode,
+  context: TraversalContext,
+  options: TraversalOptions,
+): boolean {
   if (!isVisible(node)) {
-    return false;
+    // Rescue hidden nodes controlled by a boolean property inside component definitions
+    const hasVisibleRef =
+      "componentPropertyReferences" in node &&
+      node.componentPropertyReferences &&
+      typeof node.componentPropertyReferences === "object" &&
+      "visible" in node.componentPropertyReferences;
+    if (!(hasVisibleRef && context.insideComponentDefinition)) {
+      return false;
+    }
   }
 
-  // Apply custom node filter if provided
   if (options.nodeFilter && !options.nodeFilter(node)) {
     return false;
   }
@@ -143,7 +163,7 @@ function shouldProcessNode(node: FigmaDocumentNode, options: TraversalOptions): 
  * Determine if we should traverse into a node's children.
  */
 function shouldTraverseChildren(
-  node: FigmaDocumentNode,
+  _node: FigmaDocumentNode,
   context: TraversalContext,
   options: TraversalOptions,
 ): boolean {

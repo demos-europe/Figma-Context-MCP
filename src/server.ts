@@ -3,11 +3,14 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import { Server } from "http";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ProxyAgent, EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import { Logger } from "./utils/logger.js";
+import { hasProxyEnv, setProxyMode } from "./utils/proxy-env.js";
 import { createServer } from "./mcp/index.js";
-import { getServerConfig } from "./config.js";
+import type { ServerConfig } from "./config.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { ErrorCode } from "@modelcontextprotocol/sdk/types.js";
+import * as telemetry from "./telemetry/index.js";
 
 let httpServer: Server | null = null;
 
@@ -20,11 +23,40 @@ const activeConnections = new Set<ActiveConnection>();
 /**
  * Start the MCP server in either stdio or HTTP mode.
  */
-export async function startServer(): Promise<void> {
-  const config = getServerConfig();
+export async function startServer(config: ServerConfig): Promise<void> {
+  // Three outcomes: explicit proxy URL → ProxyAgent; no proxy but env vars set
+  // → EnvHttpProxyAgent; otherwise Node's default (includes `--proxy=none`,
+  // which lets users opt out of system-level proxy vars misbehaving for
+  // api.figma.com — see issue #358).
+  //
+  // We deliberately do NOT install EnvHttpProxyAgent when no proxy vars are
+  // present, so a stale or incidental var in the user's shell (VPN client,
+  // old dev setup) can't silently route Figma traffic through an intermediary
+  // that may return 403.
+  if (config.proxy && config.proxy !== "none") {
+    setGlobalDispatcher(new ProxyAgent(config.proxy));
+    setProxyMode("explicit");
+  } else if (!config.proxy && hasProxyEnv()) {
+    setGlobalDispatcher(new EnvHttpProxyAgent());
+    setProxyMode("env");
+  }
+
+  const telemetryEnabled = telemetry.initTelemetry({
+    optOut: config.noTelemetry,
+    redactFromErrors: [config.auth.figmaApiKey, config.auth.figmaOAuthToken],
+  });
+
+  if (telemetryEnabled) {
+    // stderr (not Logger.log) because in HTTP mode Logger.log writes to stdout,
+    // and in stdio mode stdout is reserved for MCP protocol messages. stderr
+    // is safe in both modes.
+    process.stderr.write(
+      "Usage telemetry enabled. Disable: FRAMELINK_TELEMETRY=off or DO_NOT_TRACK=1\n",
+    );
+  }
 
   const serverOptions = {
-    isHTTP: !config.isStdioMode,
+    transport: config.isStdioMode ? ("stdio" as const) : ("http" as const),
     outputFormat: config.outputFormat as "yaml" | "json",
     skipImageDownloads: config.skipImageDownloads,
     imageDir: config.imageDir,
@@ -34,18 +66,45 @@ export async function startServer(): Promise<void> {
     const server = createServer(config.auth, serverOptions);
     const transport = new StdioServerTransport();
     await server.connect(transport);
+    registerShutdownHandlers(async () => {});
   } else {
     const createMcpServer = () => createServer(config.auth, serverOptions);
     console.log(`Initializing Figma MCP Server in HTTP mode on ${config.host}:${config.port}...`);
     await startHttpServer(config.host, config.port, createMcpServer);
 
-    process.on("SIGINT", async () => {
+    registerShutdownHandlers(async () => {
       Logger.log("Shutting down server...");
       await stopHttpServer();
       Logger.log("Server shutdown complete");
-      process.exit(0);
     });
   }
+}
+
+/**
+ * Register SIGINT + SIGTERM handlers that run mode-specific cleanup and then
+ * flush telemetry before exiting. MCP hosts commonly send SIGTERM, so both
+ * signals must be handled in both transport modes.
+ *
+ * Idempotent: if both signals fire (or a signal fires twice) the second
+ * invocation is ignored so we never double-shutdown.
+ */
+function registerShutdownHandlers(onShutdown: () => Promise<void>): void {
+  let shuttingDown = false;
+  const handle = async () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    // onShutdown may throw (e.g. stopHttpServer failures); telemetry.shutdown
+    // swallows its own errors (see src/telemetry/client.ts). Use try/finally
+    // so process.exit(0) always runs regardless of onShutdown failure.
+    try {
+      await onShutdown();
+    } finally {
+      await telemetry.shutdown();
+      process.exit(0);
+    }
+  };
+  process.on("SIGINT", handle);
+  process.on("SIGTERM", handle);
 }
 
 export async function startHttpServer(
