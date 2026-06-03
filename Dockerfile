@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:22-alpine
 
 # Install dependencies for sharp (image processing)
 RUN apk add --no-cache \
@@ -43,7 +43,7 @@ USER figma
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/sse || exit 1
 
 # Start the server directly from TypeScript source
 CMD ["npx", "tsx", "src/bin.ts"]
